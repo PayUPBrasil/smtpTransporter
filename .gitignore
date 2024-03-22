@@ -1,0 +1,4 @@
+.vercel
+api/config.js
+node_modules
+.env
