@@ -1,52 +1,68 @@
 import express from 'express';
-import { user, pass } from './config.js'
 import nodemailer from 'nodemailer';
 import bodyParser from 'body-parser';
-import { fileURLToPath } from 'url';
 import path from 'path';
 import cors from 'cors';
+import dotenv from 'dotenv';
+dotenv.config();
+
+
+// import createToken from './middleware/authAPI.js';
+// import { createToken } from 
+import { createToken } from './middleware/authAPI.js';
+import {verifyToken} from './middleware/decoderToken.js';
+
+import { fileURLToPath } from 'url';
 
 const app = express();
 
 const __filename = fileURLToPath( import.meta.url );
 
 app.use(bodyParser.json());
-
 app.use(cors());
-
+app.use(express.json())
+app.use(express.urlencoded({extended:true}));
 
 
 // Definir o middleware express.static para servir arquivos estáticos
 app.use(express.static(path.join(path.resolve(), 'public')));
 
-// Definir a rota raiz
+// Rota raiz da API
 app.get('/', (req, res) => {
     res.sendFile(path.join(path.resolve(), 'index.html'));
 });
 
-// Definir a rota para enviar e-mail
-app.post('/send', (req, res) => {
+// Gera um token que será usado no header das requisições
+app.post('/auth', createToken);
 
-
-    if (!req.body || Object.keys(req.body).length === 0) {
-        return res.status(400).send('Body da solicitação inválido!');
-    }
-
-    const transporter = nodemailer.createTransport({
-        host: "smtp.gmail.com",
-        port: 587,
-        auth: {
-            user,
-            pass
-        }
-    });
-
+// Rota usada para enviar o e-mail
+app.post('/send', verifyToken, (req, res) => {
     const {
         nome,
         email,
         telefone,
         mensagem,
+        subject
     } = req.body;
+
+    console.log("Mostrando o body da solicitação: ", req.body)
+
+    if (!req.body || Object.keys(req.body).length === 0) {
+        return res.status(400).send('Body da solicitação inválido!');
+    }
+
+    const user = process.env.USER;
+    const pass = process.env.PASS;
+
+    const transporter = nodemailer.createTransport({
+        host: "smtp.gmail.com",
+        port: 587,
+        auth: {
+           user:user,
+           pass:pass
+        }
+    });
+
 
 
     const htmlMessage = `
@@ -88,7 +104,7 @@ a.es-button, button.es-button { padding:10px 40px 10px 40px; display:inline-bloc
             from: "PayUP Brasil",
             to: "fabiana.souza@payupbrasil.com.br",
             replyTo: email,
-            subject: "Contato PayUP Brasil",
+            subject: subject,
             html: ` ${htmlMessage}`
         })
         .then(info => {
