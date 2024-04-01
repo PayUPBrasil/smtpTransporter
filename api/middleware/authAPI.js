@@ -21,6 +21,7 @@ export const createToken = (req,res)  => {
             {
                 'data':token
             });
+            
     } else {
         res.status(401).json({
             error: 'Invalid Credentials.'
